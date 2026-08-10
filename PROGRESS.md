@@ -35,13 +35,31 @@ Tracks build phases (see build spec `docs/BUILD-SPEC.md`) and decisions made alo
 - MIT LICENSE, CONTRIBUTING.md, CODE_OF_CONDUCT.md, issue/PR templates, README,
   `docs/COURSE-PACK-FORMAT.md`.
 
-**Not done yet (later phases):** engine logic (manifest validation, progress derivation — P1),
-IndexedDB persistence (P3), real markdown/mermaid rendering (P2), calendar heatmap data (P4),
-responsive tab-collapse on narrow screens (P5), AI-Engineer pack conversion (P6).
+**Not done yet (later phases):** IndexedDB persistence (P3), real markdown/mermaid rendering (P2),
+calendar heatmap wired to real data (P4), responsive tab-collapse on narrow screens (P5),
+AI-Engineer pack conversion (P6).
 
-## P1 — Engine core
+## P1 — Engine core ✅
 
-_(not started)_
+- `engine/schema.ts` + `engine/manifest.ts`: JSON-Schema structural validation (ajv) plus semantic
+  checks — duplicate/overlapping ids, dangling `requires`/`children` references, malformed badge
+  trigger strings, non-ascending level thresholds, and cyclic `requires` graphs (DFS with
+  white/gray/black coloring). `parseManifest` throws `ManifestValidationError` with _every_ issue
+  found, not just the first.
+- `engine/progress.ts`: event log → net completed-milestone set (sorted by `at`, so out-of-order
+  arrival is safe for a future agent-writes integration); XP; unlock derivation; item/chapter
+  completion %.
+  - **Unlock is transitive and re-verified, not just "is the direct parent complete."** An id is
+    unlocked only if every dependency is both complete _and itself unlocked_ — recursion is safe
+    because manifest validation already rejects cycles. This catches the case where an item's own
+    milestones are marked done but its prerequisite chain wasn't (tested explicitly).
+- `engine/calendar.ts`: UTC-day bucketing for the heatmap; streak with a one-day grace period
+  (today not having activity yet doesn't zero the streak, but a 2+ day gap does) — timezone/day-
+  boundary edge cases unit-tested.
+- `engine/gamification.ts`: level-from-threshold, and badge trigger evaluation for all four
+  declarative forms (`stage:`, `lab:`, `milestone:`, `streak:`).
+- 41 Vitest cases across manifest/progress/calendar/gamification, including the transitive-unlock
+  and cycle-rejection cases the spec calls out explicitly.
 
 ## P2 — Read a pack
 
